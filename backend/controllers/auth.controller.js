@@ -17,7 +17,8 @@ export const signup = async (req, res) => {
       return res.status(400).json({ error: "Email is already taken" });
     }
 
-    if(!(firstName && lastName && sex && phoneNumber)){
+    if(!(firstName.trim() && lastName.trim() && sex.trim() && phoneNumber.trim())){
+      // ใช้ trim เพื่อกัน space " "
       return res.status(400).json({ error: "All field are required"})
     }
 
@@ -61,9 +62,38 @@ export const signup = async (req, res) => {
 }
 
 export const login = async (req, res) => {
+  try {
+    const {email, password} = req.body;
+    const user = await User.findOne({ email });
+    const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
+    if(!user || !isPasswordCorrect) {
+      return res.status(400).json({ error: "Invalid username or password" });
+    }
+
+    generateTokenAndSetCookie(user._id, res);
+
+    res.status(200).json({
+      message: "Login Succesfully",
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      sex: user.sex,
+      email: user.email
+    })
+
+  } catch (error) {
+    console.log(`Error in login controller ${error.message}`);
+    res.status(400).json({ error: "Internal Server Error" });
+  }
 }
 
 export const logout = async (req, res) => {
-
+  try {
+    res.cookie("jwt", "", { maxAge: 0 });
+    res.status(200).json({ message: "Logged out succesfully"});
+  } catch (error) {
+    console.log(`Error in logout controller ${error.message}`);
+    res.status(400).json({ error: "Internal Server Error" });
+  }
 }
